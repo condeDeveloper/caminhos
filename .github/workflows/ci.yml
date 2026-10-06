@@ -1,0 +1,52 @@
+name: testes
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  testes:
+    runs-on: ${{ matrix.so }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        so: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      # O juiz e a ENUMERACAO DE TODOS OS CAMINHOS SIMPLES, que nao e um
+      # algoritmo melhor: e a definicao. Ela so cabe em grafos de menos de dez
+      # vertices, que e exatamente o tamanho em que um algoritmo errado ainda
+      # parece certo.
+      #
+      # Rodar em tres sistemas importa porque o gerador de sorteio e escrito
+      # aqui: se a sequencia mudasse entre sistemas, os grafos seriam outros e
+      # "o Dijkstra errou em 35 de 500" nao seria comparavel com nada.
+      - name: testes
+        run: dotnet test testes/Caminhos.Testes/Caminhos.Testes.csproj -c Release --nologo -v q
+
+      - name: o juiz, todos os caminhos simples contra os dois algoritmos
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- juiz
+
+      # Com peso negativo o Dijkstra erra e NAO AVISA. E "somar uma constante
+      # para consertar" erra sete vezes mais que nao consertar nada.
+      - name: as duas tentativas que nao funcionam
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- negativo
+
+      - name: todos os pares, onde as curvas se cruzam
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- densidade
+
+      # A heuristica certa da a mesma resposta gastando um quinto dos vertices.
+      # A exagerada gasta menos ainda e devolve outra resposta, sem avisar.
+      - name: a busca com palpite
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- estrela
+
+      - name: quando a pergunta nao tem resposta
+        run: dotnet run --project ferramentas/Medidor/Medidor.csproj -c Release -- ciclo
